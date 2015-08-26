@@ -2,28 +2,89 @@
 
 import argparse
 import os
+import stat
 import subprocess
+import tempfile
 import traceback
+import zipfile
 
-if os.name == 'posix':
-    BIN = r'bin/ffmpeg_unix'
-elif os.name == 'nt':
-    BIN = r'bin/ffmpeg.exe'
 
+def extract_binary(bin_loc):
+    """
+    Extracts binary from location inside .zip file to temporary directory.
+    """
+    package = zipfile.ZipFile(os.path.dirname(__file__), mode='r')
+    tmp_path = os.path.join(tempfile.gettempdir(), 'converter')
+    extracted_path = package.extract(bin_loc, tmp_path)
+    os.chmod(extracted_path, stat.S_IXUSR)
+    return extracted_path
+
+
+def get_binary():
+    """
+    Returns path to ffmpeg binary for given operating system.
+    """
+    if os.name == 'posix':  # TODO MacOS also says it is unix.
+        bin_loc = r'bin/ffmpeg_unix'
+    elif os.name == 'nt':
+        bin_loc = r'bin/ffmpeg.exe'
+
+    if '.zip' in __file__:
+        bin_path = extract_binary(bin_loc)
+    else:
+        bin_path = os.path.join(os.path.dirname(__file__), bin_loc)
+
+    return bin_path
+
+
+BIN = get_binary()
 VIDEO_FORMATS = ['.mkv', '.avi', '.mp4']
 
 parser = argparse.ArgumentParser(description='Convert video files to x265.')
 parser.add_argument('path', help='Root directory to start converting.')
 
 
+def stamp_file(filepath, ext='stamp'):
+    filename, _ = os.path.splitext(filepath)
+    return '{}.{}'.format(filename, ext)
+
+
 def create_start_stamp(filepath):
     """
     Creates stamp signaling we started converting given file.
     """
-    filename, ext = os.path.splitext(filepath)
-    stamp = '{}.stamp'.format(filepath)
-    with file(stamp, 'wb') as f:
+    stamp = stamp_file(filepath, ext='sstamp')
+    with open(stamp, 'wb'):
         os.utime(stamp, None)
+
+
+def create_end_stamp(filepath):
+    """
+    Creates stamp signaling we have successfully converted given file.
+    Also removes start stamp.
+    """
+    start_stamp = stamp_file(filepath, ext='sstamp')
+    stamp = stamp_file(filepath, ext='estamp')
+    with open(stamp, 'wb'):
+        os.utime(stamp, None)
+
+    os.remove(start_stamp)
+
+
+def has_start_stamp(filepath):
+    """
+    Checks if given file has end stamp.
+    """
+    stamp = stamp_file(filepath, ext='sstamp')
+    return os.path.exists(stamp)
+
+
+def has_end_stamp(filepath):
+    """
+    Checks if given file has end stamp.
+    """
+    stamp = stamp_file(filepath, ext='estamp')
+    return os.path.exists(stamp)
 
 
 def remove_original(filepath, filepath_out):
@@ -40,32 +101,52 @@ def remove_original(filepath, filepath_out):
 
 
 def convert_file(filepath):
+    """
+    Handles converting of single file. It creates stamps signaling the file is
+    being converted and that it was finished.
+    """
     path, ext = os.path.splitext(filepath)
     filepath_out = '{}.out.mkv'.format(path)
 
-    if '.out.' in filepath:
-        return
+    if not has_end_stamp(filepath):
+        if ext not in VIDEO_FORMATS:
+            return
 
-    if os.path.isfile(filepath_out):
-        return
+        if has_start_stamp(filepath):
+            if os.path.exists(filepath_out):
+                os.remove(filepath_out)
 
-    if ext not in VIDEO_FORMATS:
-        return
-
-    try:
-        subprocess.check_call([BIN, '-i', filepath, '-sn', '-x265-params', 'crf=25', '-c:v', 'libx265', filepath_out])
-        remove_original(filepath, filepath_out)
-    except subprocess.CalledProcessError as e:
-        traceback.print_exc()
+        try:
+            create_start_stamp(filepath)
+            with open('{}.convert'.format(path), 'w') as convert_out:
+                cmd = [BIN, '-i', filepath, '-sn', '-x265-params', 'crf=25',
+                       '-c:v', 'libx265', filepath_out]
+                subprocess.check_call(
+                    cmd,
+                    stdout=convert_out,
+                    stderr=convert_out
+                )
+            create_end_stamp(filepath)
+            remove_original(filepath, filepath_out)
+        except subprocess.CalledProcessError:
+            traceback.print_exc()
+            return filepath
 
 
 def main(path):
     dir_path = os.path.abspath(path)
+    files_failed = []
 
     for root, dirs, files in os.walk(dir_path):
         for filename in files:
             filepath = os.path.abspath(os.path.join(root, filename))
-            convert_file(filepath)
+            failed = convert_file(filepath)
+
+            if failed:
+                files_failed.append(filepath)
+
+    for fail in files_failed:
+        print('Failed: {}'.format(fail))
 
 
 args = parser.parse_args()
