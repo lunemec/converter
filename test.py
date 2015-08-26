@@ -8,7 +8,7 @@ This is just test of sqlalchemy and home directory resolving.
 import sqlite3
 import os
 
-DB_FILE = os.path.expanduser('~/.convertdb')
+DB_FILE = 'convertdb'
 
 
 def create_table(cursor):
@@ -66,23 +66,21 @@ def finished_converting(cursor, input):
 
 
 def main():
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
+    with sqlite3.connect(DB_FILE) as conn:
+        c = conn.cursor()
 
-    if not table_exists(c):
-        create_table(c)
+        if not table_exists(c):
+            create_table(c)
 
-    for input in ['testfile']:
-        if should_convert(c, input):
-            started_converting(c, input)
-            conn.commit()
-            print('Would convert {}'.format(input))
-            finished_converting(c, input)
-            conn.commit()
-        else:
-            print('Already converted {}'.format(input))
-
-    conn.close()
+        for input in ['testfile']:
+            if should_convert(c, input):
+                started_converting(c, input)
+                conn.commit()
+                print('Would convert {}'.format(input))
+                finished_converting(c, input)
+                conn.commit()
+            else:
+                print('Already converted {}'.format(input))
 
 
 if __name__ == '__main__':
