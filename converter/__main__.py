@@ -68,7 +68,8 @@ def create_end_stamp(filepath):
     with open(stamp, 'wb'):
         os.utime(stamp, None)
 
-    os.remove(start_stamp)
+    if os.path.exists(start_stamp):
+        os.remove(start_stamp)
 
 
 def has_start_stamp(filepath):
@@ -109,6 +110,11 @@ def convert_file(filepath):
     filepath_out = '{}.out.mkv'.format(path)
 
     if not has_end_stamp(filepath):
+
+        if '.out.' in filepath:  # It is old-style converted file.
+            create_end_stamp(filepath)
+            return
+
         if ext not in VIDEO_FORMATS:
             return
 
@@ -118,6 +124,7 @@ def convert_file(filepath):
 
         try:
             create_start_stamp(filepath)
+            print('Converting: {}'.format(filepath))
             with open('{}.convert'.format(path), 'w') as convert_out:
                 cmd = [BIN, '-i', filepath, '-sn', '-x265-params', 'crf=25',
                        '-c:v', 'libx265', filepath_out]
