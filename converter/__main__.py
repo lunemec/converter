@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import shutil
 import stat
 import subprocess
 import tempfile
@@ -9,13 +10,17 @@ import traceback
 import zipfile
 
 
+TMP_DIR = None
+
+
 def extract_binary(bin_loc):
     """
     Extracts binary from location inside .zip file to temporary directory.
     """
     package = zipfile.ZipFile(os.path.dirname(__file__), mode='r')
-    tmp_path = os.path.join(tempfile.gettempdir(), 'converter')
-    extracted_path = package.extract(bin_loc, tmp_path)
+    global TMP_DIR
+    TMP_DIR = tempfile.mkdtemp(suffix='converter')
+    extracted_path = package.extract(bin_loc, TMP_DIR)
     os.chmod(extracted_path, stat.S_IXUSR)
     return extracted_path
 
@@ -156,5 +161,24 @@ def main(path):
         print('Failed: {}'.format(fail))
 
 
-args = parser.parse_args()
-main(args.path)
+def cleanup():
+    """
+    Removes temporary directory if present.
+    """
+    global TMP_DIR
+    if TMP_DIR:
+        try:
+            shutil.rmtree(TMP_DIR)
+        except PermissionError:
+            # We probably don't have access to our own tmp directory, well
+            # nothing we can do about it.
+            pass
+
+
+try:
+    args = parser.parse_args()
+    main(args.path)
+except KeyboardInterrupt:
+    print('Exiting.')
+finally:
+    cleanup()
