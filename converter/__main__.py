@@ -47,6 +47,7 @@ VIDEO_FORMATS = ['.mkv', '.avi', '.mp4']
 
 parser = argparse.ArgumentParser(description='Convert video files to x265.')
 parser.add_argument('path', help='Root directory to start converting.')
+parser.add_argument('-d', '--delete', action='store_true', help='Delete original files after finishing.')
 
 
 def stamp_file(filepath, ext='stamp'):
@@ -106,21 +107,21 @@ def remove_original(filepath, filepath_out):
         pass
 
 
-def convert_file(filepath):
+def convert_file(filepath, delete):
     """
     Handles converting of single file. It creates stamps signaling the file is
     being converted and that it was finished.
     """
     path, ext = os.path.splitext(filepath)
-    filepath_out = '{}.out.mkv'.format(path)
+    filepath_out = '{}.output.mkv'.format(path)
+    old_out = '{}.out.mkv'.format(path)
 
     if not has_end_stamp(filepath):
-
-        if '.out.' in filepath:  # It is old-style converted file.
-            create_end_stamp(filepath)
+        if ext not in VIDEO_FORMATS:
             return
 
-        if ext not in VIDEO_FORMATS:
+        if '.out.' in filepath or os.path.exists(old_out):  # It is old-style converted file.
+            create_end_stamp(filepath)
             return
 
         if has_start_stamp(filepath):
@@ -131,7 +132,7 @@ def convert_file(filepath):
             create_start_stamp(filepath)
             print('Converting: {}'.format(filepath))
             with open('{}.convert'.format(path), 'w') as convert_out:
-                cmd = [BIN, '-i', filepath, '-sn', '-x265-params', 'crf=25',
+                cmd = [BIN, '-y', '-i', filepath, '-sn', '-x265-params', 'crf=25',
                        '-c:v', 'libx265', filepath_out]
                 subprocess.check_call(
                     cmd,
@@ -139,20 +140,22 @@ def convert_file(filepath):
                     stderr=convert_out
                 )
             create_end_stamp(filepath)
-            remove_original(filepath, filepath_out)
+
+            if delete:
+                remove_original(filepath, filepath_out)
         except subprocess.CalledProcessError:
             traceback.print_exc()
             return filepath
 
 
-def main(path):
+def main(path, delete):
     dir_path = os.path.abspath(path)
     files_failed = []
 
     for root, dirs, files in os.walk(dir_path):
-        for filename in files:
+        for filename in sorted(files):
             filepath = os.path.abspath(os.path.join(root, filename))
-            failed = convert_file(filepath)
+            failed = convert_file(filepath, delete)
 
             if failed:
                 files_failed.append(filepath)
@@ -177,7 +180,7 @@ def cleanup():
 
 try:
     args = parser.parse_args()
-    main(args.path)
+    main(args.path, args.delete)
 except KeyboardInterrupt:
     print('Exiting.')
 finally:
