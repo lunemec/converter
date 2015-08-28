@@ -7,7 +7,7 @@ import stat
 import tempfile
 import zipfile
 
-from .file import ConvertedFile
+from file import ConvertedFile
 
 
 TMP_DIR = None
@@ -52,13 +52,13 @@ parser.add_argument('-d', '--delete', action='store_true',
 
 
 def main(args):
-    dir_path = os.path.abspath(args.ath)
+    dir_path = os.path.abspath(args.path)
     files_failed = []
 
     for root, dirs, files in os.walk(dir_path):
         for filename in sorted(files):
             filepath = os.path.abspath(os.path.join(root, filename))
-            f = ConvertedFile(filepath, args.delete)
+            f = ConvertedFile(BIN, VIDEO_FORMATS, filepath, args.delete)
             failed = f.convert_file()
 
             if failed:

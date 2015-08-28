@@ -4,8 +4,7 @@ import os
 import subprocess
 import traceback
 
-from . import BIN, VIDEO_FORMATS
-from .stamp import (
+from stamp import (
     create_end_stamp,
     create_start_stamp,
     has_end_stamp,
@@ -15,13 +14,16 @@ from .stamp import (
 
 class ConvertedFile():
 
-    def __init__(self, filepath, delete, convert=True):
+    def __init__(self, binary, video_formats, filepath, delete, convert=True):
         """
         @param filepath: absolute filepath to the file being converted
         @param delete: True/False if we want the original to be deleted
         @param convert: for testing purposes, if False we don't call ffmpeg.
         """
+        self.binary = binary
+        self.video_formats = video_formats
         self.filepath_in = filepath
+        self.delete = delete
 
         self.path, self.ext = os.path.splitext(filepath)
         self.filepath_out = '{}.output.mkv'.format(self.path)
@@ -48,8 +50,8 @@ class ConvertedFile():
         If the stamp is missing, we want to convert, in which case, we check for
         the file's extension and decide accordingly.
         """
-        if not has_end_stamp(self.filepath_in):
-            if self.ext in VIDEO_FORMATS:
+        if not has_end_stamp(self.filepath_in) and '.output.' not in self.filepath_in:
+            if self.ext in self.video_formats:
                 # This condition is only for older-style converted files.
                 if '.out.' in self.filepath_in or os.path.exists(self.old_out):
                     create_end_stamp(self.filepath_in)
@@ -75,7 +77,7 @@ class ConvertedFile():
                 create_start_stamp(self.filepath_in)
                 print('Converting: {}'.format(self.filepath_in))
                 with open('{}.convert'.format(self.path), 'w') as convert_out:
-                    cmd = [BIN, '-y', '-i', self.filepath_in, '-sn',
+                    cmd = [self.binary, '-y', '-i', self.filepath_in, '-sn',
                            '-x265-params', 'crf=25', '-c:v', 'libx265',
                            self.filepath_out]
 
