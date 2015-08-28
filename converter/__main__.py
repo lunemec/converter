@@ -4,10 +4,10 @@ import argparse
 import os
 import shutil
 import stat
-import subprocess
 import tempfile
-import traceback
 import zipfile
+
+from .file import ConvertedFile
 
 
 TMP_DIR = None
@@ -47,115 +47,19 @@ VIDEO_FORMATS = ['.mkv', '.avi', '.mp4']
 
 parser = argparse.ArgumentParser(description='Convert video files to x265.')
 parser.add_argument('path', help='Root directory to start converting.')
-parser.add_argument('-d', '--delete', action='store_true', help='Delete original files after finishing.')
+parser.add_argument('-d', '--delete', action='store_true',
+                    help='Delete original files after finishing.')
 
 
-def stamp_file(filepath, ext='stamp'):
-    filename, _ = os.path.splitext(filepath)
-    return '{}.{}'.format(filename, ext)
-
-
-def create_start_stamp(filepath):
-    """
-    Creates stamp signaling we started converting given file.
-    """
-    stamp = stamp_file(filepath, ext='sstamp')
-    with open(stamp, 'wb'):
-        os.utime(stamp, None)
-
-
-def create_end_stamp(filepath):
-    """
-    Creates stamp signaling we have successfully converted given file.
-    Also removes start stamp.
-    """
-    start_stamp = stamp_file(filepath, ext='sstamp')
-    stamp = stamp_file(filepath, ext='estamp')
-    with open(stamp, 'wb'):
-        os.utime(stamp, None)
-
-    if os.path.exists(start_stamp):
-        os.remove(start_stamp)
-
-
-def has_start_stamp(filepath):
-    """
-    Checks if given file has end stamp.
-    """
-    stamp = stamp_file(filepath, ext='sstamp')
-    return os.path.exists(stamp)
-
-
-def has_end_stamp(filepath):
-    """
-    Checks if given file has end stamp.
-    """
-    stamp = stamp_file(filepath, ext='estamp')
-    return os.path.exists(stamp)
-
-
-def remove_original(filepath, filepath_out):
-    """
-    Removes original file that has been successfully converted and moves the
-    newly converted file to its name.
-    """
-    try:
-        os.remove(filepath)
-        os.rename(filepath_out, filepath)
-    except OSError:
-        # This means the file is directory.
-        pass
-
-
-def convert_file(filepath, delete):
-    """
-    Handles converting of single file. It creates stamps signaling the file is
-    being converted and that it was finished.
-    """
-    path, ext = os.path.splitext(filepath)
-    filepath_out = '{}.output.mkv'.format(path)
-    old_out = '{}.out.mkv'.format(path)
-
-    if not has_end_stamp(filepath):
-        if ext not in VIDEO_FORMATS:
-            return
-
-        if '.out.' in filepath or os.path.exists(old_out):  # It is old-style converted file.
-            create_end_stamp(filepath)
-            return
-
-        if has_start_stamp(filepath):
-            if os.path.exists(filepath_out):
-                os.remove(filepath_out)
-
-        try:
-            create_start_stamp(filepath)
-            print('Converting: {}'.format(filepath))
-            with open('{}.convert'.format(path), 'w') as convert_out:
-                cmd = [BIN, '-y', '-i', filepath, '-sn', '-x265-params', 'crf=25',
-                       '-c:v', 'libx265', filepath_out]
-                subprocess.check_call(
-                    cmd,
-                    stdout=convert_out,
-                    stderr=convert_out
-                )
-            create_end_stamp(filepath)
-
-            if delete:
-                remove_original(filepath, filepath_out)
-        except subprocess.CalledProcessError:
-            traceback.print_exc()
-            return filepath
-
-
-def main(path, delete):
-    dir_path = os.path.abspath(path)
+def main(args):
+    dir_path = os.path.abspath(args.ath)
     files_failed = []
 
     for root, dirs, files in os.walk(dir_path):
         for filename in sorted(files):
             filepath = os.path.abspath(os.path.join(root, filename))
-            failed = convert_file(filepath, delete)
+            f = ConvertedFile(filepath, args.delete)
+            failed = f.convert_file()
 
             if failed:
                 files_failed.append(filepath)
@@ -180,7 +84,7 @@ def cleanup():
 
 try:
     args = parser.parse_args()
-    main(args.path, args.delete)
+    main(args)
 except KeyboardInterrupt:
     print('Exiting.')
 finally:
