@@ -7,7 +7,8 @@ import stat
 import tempfile
 import zipfile
 
-from file import ConvertedFile
+from convert import ConvertedFile
+from utils import text
 
 
 TMP_DIR = None
@@ -65,7 +66,7 @@ def main(args):
                 files_failed.append(filepath)
 
     for fail in files_failed:
-        print('Failed: {}'.format(fail))
+        text('Failed: {}'.format(fail))
 
 
 def cleanup():
@@ -86,6 +87,6 @@ try:
     args = parser.parse_args()
     main(args)
 except KeyboardInterrupt:
-    print('Exiting.')
+    text('Exiting.')
 finally:
     cleanup()

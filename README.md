@@ -22,3 +22,11 @@ we haven't finished previous conversion of this file and we want to convert it a
 In this case, we refresh start stamp, and start the conversion. After the conversion is
 finished, we create end stamp, delete the start stamp and delete the original file
 (if specified in cmdline arguments).
+
+File names
+----------
+Some files may have strange unicode charcters in their name. This causes errors on printing
+which file is being converted. When you try to find your file and fail, look for '?' characters
+inside the printed text and replace them with * for searching in your system. These are the
+unprintable characters replaced to be visible. You may also fix this issue by renaming
+that file.
