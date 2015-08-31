@@ -65,7 +65,7 @@ def main(args):
                 files_failed.append(filepath)
 
     for fail in files_failed:
-        print('Failed: {}'.format(fail))
+        print('Failed: {}'.format(fail).encode('utf-8'))
 
 
 def cleanup():
@@ -86,6 +86,6 @@ try:
     args = parser.parse_args()
     main(args)
 except KeyboardInterrupt:
-    print('Exiting.')
+    print('Exiting.'.encode('utf-8'))
 finally:
     cleanup()

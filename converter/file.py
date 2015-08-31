@@ -75,7 +75,7 @@ class ConvertedFile():
 
             try:
                 create_start_stamp(self.filepath_in)
-                print('Converting: {}'.format(self.filepath_in))
+                print('Converting: {}'.format(self.filepath_in).encode('utf-8'))
                 with open('{}.convert'.format(self.path), 'w') as convert_out:
                     cmd = [self.binary, '-y', '-i', self.filepath_in, '-sn',
                            '-x265-params', 'crf=25', '-c:v', 'libx265',
