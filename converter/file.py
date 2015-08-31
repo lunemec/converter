@@ -90,7 +90,7 @@ class ConvertedFile():
                 create_end_stamp(self.filepath_in)
 
                 if self.delete:
-                    self.remove_original(self.filepath_in, self.filepath_out)
+                    self.remove_original()
             except subprocess.CalledProcessError:
                 traceback.print_exc()
                 return self.filepath_in
