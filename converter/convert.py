@@ -27,8 +27,12 @@ class ConvertedFile():
         self.delete = delete
 
         self.path, self.ext = os.path.splitext(filepath)
+
+        # Temporary path used during the convert.
         self.filepath_out = '{}.output.mkv'.format(self.path)
-        self.old_out = '{}.out.mkv'.format(self.path)
+        # Filepath of the resulting file. The temporary file will be renamed to
+        # this.
+        self.filepath = '{}.mkv'.format(self.path)
 
         self.convert = convert
 
@@ -39,7 +43,7 @@ class ConvertedFile():
         """
         try:
             os.remove(self.filepath_in)
-            os.rename(self.filepath_out, self.filepath_in)
+            os.rename(self.filepath_out, self.filepath)
         except OSError:
             # This means the file is directory.
             pass
@@ -53,11 +57,6 @@ class ConvertedFile():
         """
         if not has_end_stamp(self.filepath_in) and '.output.' not in self.filepath_in:
             if self.ext in self.video_formats:
-                # This condition is only for older-style converted files.
-                if '.out.' in self.filepath_in or os.path.exists(self.old_out):
-                    create_end_stamp(self.filepath_in)
-                    return False
-
                 return True
 
         return False
