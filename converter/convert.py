@@ -79,7 +79,7 @@ class ConvertedFile():
                 text('Converting: {}'.format(self.filepath_in))
                 with open('{}.convert'.format(self.path), 'w') as convert_out:
                     cmd = [self.binary, '-y', '-i', self.filepath_in, '-sn',
-                           '-x265-params', 'crf=25', '-c:v', 'libx265',
+                           '-x265-params', 'crf=28', '-c:v', 'libx265',
                            self.filepath_out]
 
                     if self.convert:
