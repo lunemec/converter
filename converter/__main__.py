@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import platform
 import shutil
 import stat
 import tempfile
@@ -30,10 +31,13 @@ def get_binary():
     """
     Returns path to ffmpeg binary for given operating system.
     """
-    if os.name == 'posix':  # TODO MacOS also says it is unix.
-        bin_loc = r'bin/ffmpeg_unix'
-    elif os.name == 'nt':
-        bin_loc = r'bin/ffmpeg.exe'
+    system = platform.system()
+    if system == 'Linux':
+        bin_loc = r'bin/ffmpeg_linux'
+    elif system == 'Darwin':
+        bin_loc = r'bin/ffmpeg_macos'
+    elif system == 'nt':
+        bin_loc = r'bin/ffmpeg_windows.exe'
 
     if '.zip' in __file__:
         bin_path = extract_binary(bin_loc)
@@ -77,7 +81,7 @@ def cleanup():
     if TMP_DIR:
         try:
             shutil.rmtree(TMP_DIR)
-        except PermissionError:
+        except IOError:
             # We probably don't have access to our own tmp directory, well
             # nothing we can do about it.
             pass
