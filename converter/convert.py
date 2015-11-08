@@ -87,10 +87,10 @@ class ConvertedFile():
                             stdout=convert_out,
                             stderr=convert_out
                         )
+
                 create_end_stamp(self.filepath_in)
 
                 if self.delete:
                     self.remove_original()
             except subprocess.CalledProcessError:
-                traceback.print_exc()
-                return self.filepath_in
+                text('Failed. Check the "{}.convert" file for more details.'.format(self.path))
